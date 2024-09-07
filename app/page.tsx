@@ -106,13 +106,15 @@ export default function Home() {
       }
     }, options);
 
-    if (loader.current) {
-      observer.observe(loader.current);
+    const currentLoader = loader.current; // Copiar para uma variável local
+
+    if (currentLoader) {
+      observer.observe(currentLoader);
     }
 
     return () => {
-      if (loader.current) {
-        observer.unobserve(loader.current);
+      if (currentLoader) {
+        observer.unobserve(currentLoader); // Usar a variável local na função de limpeza
       }
     };
   }, [loadMoreItems]);
@@ -168,7 +170,7 @@ export default function Home() {
     const match = filename.match(/(\d{4}-\d{2}-\d{2}) at (\d{2}\.\d{2}\.\d{2} [AP]M)/);
     if (match) {
       const [, , timePart] = match;
-      const [time, period] = timePart.split(' ');
+      const [time] = timePart.split(' '); // Remover 'period'
       const [hours, minutes] = time.split('.');
       
       if (selectedProfile) {
