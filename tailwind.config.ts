@@ -14,6 +14,11 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/aspect-ratio'),
+  ],
+  safelist: [
+    { pattern: /grid-cols-/ }
+  ]
 };
 export default config;
