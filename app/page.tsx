@@ -173,7 +173,7 @@ export default function Home() {
     const match = filename.match(/(\d{4}-\d{2}-\d{2}) at (\d{2}\.\d{2}\.\d{2} [AP]M)/);
     if (match) {
       const [, datePart, timePart] = match;
-      const [year, month, day] = datePart.split('-');
+      const [, month, day] = datePart.split('-'); // Remova a extração do 'year'
       const [time] = timePart.split(' ');
       const [hours, minutes] = time.split('.');
       
@@ -190,7 +190,8 @@ export default function Home() {
       }
     }
     return '';
-  };
+};
+
 
   const filteredProfiles = profiles.filter(profile => 
     profile.instagram_id.toLowerCase().includes(searchTerm.toLowerCase())
