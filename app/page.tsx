@@ -106,14 +106,14 @@ export default function Home() {
       }
     }, options);
 
-    const currentLoader = loader.current;
+    const currentLoader = loader.current; // Captura o valor do ref
 
     if (currentLoader) {
       observer.observe(currentLoader);
     }
 
     return () => {
-      if (currentLoader) {
+      if (currentLoader) { // Usa o valor capturado na limpeza
         observer.unobserve(currentLoader);
       }
     };
@@ -143,7 +143,7 @@ export default function Home() {
     setSelectedDate(null);
     setVisibleMediaFiles([]);
     setLoading(true);
-    setMenuOpen(false); // Close menu after selection
+    setMenuOpen(false); // Fecha o menu após a seleção
     fetch(`/storiesJson/${instagramId}.json`)
       .then(response => response.json())
       .then((data: StoryData) => {
