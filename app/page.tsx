@@ -1,316 +1,345 @@
 'use client'
 
-import React, { useState } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Menu, X, ZoomIn, ZoomOut, Calendar } from 'lucide-react';
+import Image from 'next/image';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
-const API_URL = 'https://gaiadev.com.br/stories/'
+const bucketName = "nbapedroccm";
+const region = "us-east-2";
+const basePath = `https://${bucketName}.s3.${region}.amazonaws.com/`;
 
-const useAuth = () => {
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
-
-  const apiCall = async (endpoint: string, method: string, data?: any) => {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    })
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Algo deu errado')
-    }
-    return response.json()
-  }
-
-  const login = async (email: string, password: string) => {
-    setIsLoading(true)
-    try {
-      const data = await apiCall('/login', 'POST', { email, password })
-      setUser(data.user)
-      return { success: true, message: "Login realizado com sucesso!" }
-    } catch (error: any) {
-      return { success: false, message: error.message || "Erro ao fazer login." }
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const register = async (name: string, email: string, password: string) => {
-    setIsLoading(true)
-    try {
-      const data = await apiCall('/register', 'POST', { name, email, password })
-      setUser(data.user)
-      return { success: true, message: "Registro realizado com sucesso!" }
-    } catch (error: any) {
-      return { success: false, message: error.message || "Erro ao registrar." }
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const forgotPassword = async (email: string) => {
-    setIsLoading(true)
-    try {
-      await apiCall('/forgot-password', 'POST', { email })
-      return { success: true, message: "Email de recuperação enviado!" }
-    } catch (error: any) {
-      return { success: false, message: error.message || "Erro ao enviar email de recuperação." }
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const logout = async () => {
-    setIsLoading(true)
-    try {
-      await apiCall('/logout', 'POST')
-      setUser(null)
-      return { success: true, message: "Logout realizado com sucesso!" }
-    } catch (error: any) {
-      return { success: false, message: error.message || "Erro ao fazer logout." }
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  return { user, login, register, forgotPassword, logout, isLoading }
+interface Profile {
+  id: number;
+  user_id: number;
+  instagram_id: string;
+  id_profile: string;
 }
 
-interface LoginComponentProps {
-  onLogin: () => void;
+interface StoryData {
+  files: string[];
 }
 
-const LoginComponent: React.FC<LoginComponentProps> = ({ onLogin }) => {
-  const [activeTab, setActiveTab] = useState("login")
-  const { login, register, forgotPassword, isLoading } = useAuth()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [name, setName] = useState("")
-  const [message, setMessage] = useState("")
-  const [messageType, setMessageType] = useState<"info" | "error" | "success">("info")
+const INITIAL_LOAD = 50;
+const LOAD_MORE = 20;
+const MIN_THUMBNAIL_WIDTH = 100;
+const MAX_THUMBNAIL_WIDTH = 300;
+const ZOOM_STEP = 20;
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const result = await login(email, password)
-    if (result.success) {
-      onLogin()
-    } else {
-      setMessage(result.message)
-      setMessageType("error")
+export default function Home() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [visibleMediaFiles, setVisibleMediaFiles] = useState<string[]>([]);
+  const [allMediaFiles, setAllMediaFiles] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [thumbnailWidth, setThumbnailWidth] = useState(200);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
+  const [showPhotos, setShowPhotos] = useState(true);
+  const [showVideos, setShowVideos] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(getYesterday());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const loader = useRef(null);
+
+  function getYesterday() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday;
+  }
+
+  const loadMediaForDate = useCallback((date: Date) => {
+    setLoading(true);
+    const formattedDate = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear().toString().slice(-2)}`;
+    fetch(`/datas/${formattedDate}.json`)
+      .then(response => response.json())
+      .then((data: StoryData) => {
+        const reversedFiles = [...data.files].reverse();
+        setAllMediaFiles(reversedFiles);
+        setVisibleMediaFiles(reversedFiles.slice(0, INITIAL_LOAD));
+        setHasMore(reversedFiles.length > INITIAL_LOAD);
+      })
+      .catch(error => console.error('Error loading media files:', error))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const loadMoreItems = useCallback(() => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    
+    const currentLength = visibleMediaFiles.length;
+    const more = allMediaFiles.slice(currentLength, currentLength + LOAD_MORE);
+    
+    setVisibleMediaFiles(prev => [...prev, ...more]);
+    setHasMore(currentLength + LOAD_MORE < allMediaFiles.length);
+    setLoading(false);
+  }, [loading, hasMore, visibleMediaFiles, allMediaFiles]);
+
+  useEffect(() => {
+    if (selectedDate) {
+      loadMediaForDate(selectedDate);
     }
-  }
+  }, [selectedDate, loadMediaForDate]);
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const result = await register(name, email, password)
-    setMessage(result.message)
-    setMessageType(result.success ? "success" : "error")
-    if (result.success) {
-      setActiveTab("login")
+  useEffect(() => {
+    fetch('/profiles.json')
+      .then(response => response.json())
+      .then((data: Profile[]) => {
+        setProfiles(data);
+      })
+      .catch(error => console.error('Error loading profiles:', error));
+  }, []);
+
+  useEffect(() => {
+    const options = {
+      root: null,
+      rootMargin: "20px",
+      threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      const target = entries[0];
+      if (target.isIntersecting && hasMore) {
+        loadMoreItems();
+      }
+    }, options);
+
+    const currentLoader = loader.current;
+
+    if (currentLoader) {
+      observer.observe(currentLoader);
     }
-  }
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const result = await forgotPassword(email)
-    setMessage(result.message)
-    setMessageType(result.success ? "success" : "error")
-  }
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+    };
+  }, [loadMoreItems, hasMore]);
+
+  const handleDateChange = (date: Date | null) => {
+    setSelectedDate(date);
+    setSelectedProfile(null);
+    setCalendarOpen(false);
+    if (date) {
+      loadMediaForDate(date);
+    }
+  };
+
+  const isVideo = (filename: string): boolean => filename.endsWith('.mp4');
+
+  const handleZoomIn = () => {
+    setThumbnailWidth(prev => Math.min(MAX_THUMBNAIL_WIDTH, prev + ZOOM_STEP));
+  };
+
+  const handleZoomOut = () => {
+    setThumbnailWidth(prev => Math.max(MIN_THUMBNAIL_WIDTH, prev - ZOOM_STEP));
+  };
+
+  const handleProfileSelect = (instagramId: string) => {
+    setSelectedProfile(instagramId);
+    setSelectedDate(null);
+    setVisibleMediaFiles([]);
+    setLoading(true);
+    setMenuOpen(false); // Close menu after selection
+    fetch(`/storiesJson/${instagramId}.json`)
+      .then(response => response.json())
+      .then((data: StoryData) => {
+        const reversedFiles = [...data.files].reverse();
+        setAllMediaFiles(reversedFiles);
+        setVisibleMediaFiles(reversedFiles.slice(0, INITIAL_LOAD));
+        setHasMore(reversedFiles.length > INITIAL_LOAD);
+      })
+      .catch(error => console.error('Error loading profile data:', error))
+      .finally(() => setLoading(false));
+  };
+
+  const togglePhotos = () => {
+    setShowPhotos(!showPhotos);
+  };
+
+  const toggleVideos = () => {
+    setShowVideos(!showVideos);
+  };
+
+  const filteredMediaFiles = visibleMediaFiles.filter(file => {
+    const isVideoFile = isVideo(file);
+    return (isVideoFile && showVideos) || (!isVideoFile && showPhotos);
+  });
+
+  const formatDate = (filename: string) => {
+    const match = filename.match(/(\d{4}-\d{2}-\d{2}) at (\d{2}\.\d{2}\.\d{2} [AP]M)/);
+    if (match) {
+      const [, datePart, timePart] = match;
+      const [year, month, day] = datePart.split('-');
+      const [time] = timePart.split(' ');
+      const [hours, minutes] = time.split('.');
+      
+      const formattedDate = `${day}/${month} - ${hours}:${minutes}`;
+      
+      if (selectedProfile) {
+        return `${selectedProfile}\n${formattedDate}`;
+      } else {
+        const profileMatch = filename.match(/([^/]+)\/([^/]+)\//);
+        if (profileMatch) {
+          const profileName = profileMatch[2];
+          return `@${profileName}\n${formattedDate}`;
+        }
+      }
+    }
+    return '';
+  };
+
+  const filteredProfiles = profiles.filter(profile => 
+    profile.instagram_id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
-      <div className="w-full md:w-1/2 bg-gray-100 p-4 md:p-8">
-        <h1 className="text-3xl font-bold text-center mb-6">Taste it!</h1>
-        <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((num) => (
-            <div key={num} className="aspect-square bg-gray-300 rounded-lg shadow-md flex items-center justify-center">
-              <span className="text-gray-600">Thumb {num}</span>
+    <div className="min-h-screen w-full bg-black text-white">
+      {/* Header */}
+      <header className="flex justify-between items-center p-4">
+        <div className="flex items-center">
+          <Menu className="mr-4 cursor-pointer" onClick={() => setMenuOpen(!menuOpen)} />
+          <span className="text-red-600 font-bold text-xl">Premium</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => setCalendarOpen(!calendarOpen)}
+            className="bg-gray-800 p-2 rounded-full"
+          >
+            <Calendar size={24} />
+          </button>
+          <ZoomOut onClick={handleZoomOut} className="cursor-pointer" />
+          <ZoomIn onClick={handleZoomIn} className="cursor-pointer" />
+        </div>
+      </header>
+
+      {/* Date Picker */}
+      {calendarOpen && (
+        <div className="absolute right-0 mt-2 z-50">
+          <DatePicker
+            selected={selectedDate}
+            onChange={handleDateChange}
+            inline
+            calendarClassName="bg-gray-800 border border-gray-700 rounded-lg shadow-lg"
+          />
+        </div>
+      )}
+
+      {/* Navigation */}
+      <nav className="flex space-x-4 p-4 border-b border-gray-700">
+        <button 
+          className={`px-4 py-2 rounded-full ${showPhotos ? 'bg-white text-black' : 'border border-gray-500 text-white'}`}
+          onClick={togglePhotos}
+        >
+          Photos
+        </button>
+        <button 
+          className={`px-4 py-2 rounded-full ${showVideos ? 'bg-white text-black' : 'border border-gray-500 text-white'}`}
+          onClick={toggleVideos}
+        >
+          Videos
+        </button>
+      </nav>
+
+      {/* Main content */}
+      <main className="relative p-4">
+        {/* Side menu */}
+        <div className={`fixed top-0 left-0 h-full w-64 bg-gray-900 transform ${menuOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out z-20 flex flex-col`}>
+          <div className="flex flex-col justify-between p-4 border-b border-gray-700 bg-gray-900 sticky top-0">
+            <div className="flex justify-between items-center mb-4">
+              <span className="font-bold">Profiles</span>
+              <X className="cursor-pointer" onClick={() => setMenuOpen(false)} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search profiles..."
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <ul className="p-4 overflow-y-auto flex-grow">
+            {filteredProfiles.map(profile => (
+              <li 
+                key={profile.id} 
+                className={`py-2 cursor-pointer hover:bg-gray-800 ${selectedProfile === profile.instagram_id ? 'bg-gray-700' : ''} flex items-center`}
+                onClick={() => handleProfileSelect(profile.instagram_id)}
+              >
+                <Image
+                  src={`/instagram_profile/${profile.instagram_id}.jpg`}
+                  alt={`${profile.instagram_id} profile`}
+                  width={24}
+                  height={24}
+                  className="rounded-full mr-2"
+                />
+                <span>{profile.instagram_id}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Media grid */}
+        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${thumbnailWidth}px, 1fr))` }}>
+          {filteredMediaFiles.map((file, index) => (
+            <div key={index} className="relative aspect-[9/16] bg-gray-800 rounded-lg overflow-hidden">
+              {isVideo(file) ? (
+                <video
+                  src={`${basePath}${file}`}
+                  className="w-full h-full object-cover"
+                  playsInline
+                  muted
+                  loop
+                  controls
+                  preload="metadata"
+                />
+              ) : (
+                <Image
+                  src={`${basePath}${file}`}
+                  alt={`Short ${index + 1}`}
+                  layout="fill"
+                  objectFit="cover"
+                  className="cursor-pointer"
+                  onClick={() => setFullscreenImage(`${basePath}${file}`)}
+                />
+              )}
+              <div className="absolute bottom-2 left-2 text-white text-xs">
+                <p className="bg-black bg-opacity-50 p-1 rounded">
+                  {formatDate(file)}
+                </p>
+              </div>
             </div>
           ))}
         </div>
-      </div>
-      <div className="w-full md:w-1/2 bg-white p-4 md:p-8 flex items-center justify-center">
-        {message && (
-          <Alert className="mb-4" variant={messageType === "error" ? "destructive" : "default"}>
-            <AlertTitle>{messageType === "error" ? "Erro" : "Sucesso"}</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
+        
+        {/* Loading indicator */}
+        <div ref={loader} className="flex justify-center my-4">
+          {loading && <p>Carregando mais...</p>}
+          {!loading && !hasMore && <p>Não há mais itens para carregar</p>}
+        </div>
+
+        {/* Fullscreen Image Modal */}
+        {fullscreenImage && (
+          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+            <div className="relative w-full h-full">
+              <Image
+                src={fullscreenImage}
+                alt="Fullscreen image"
+                layout="fill"
+                objectFit="contain"
+              />
+              <button
+                className="absolute top-4 right-4 text-white text-2xl"
+                onClick={() => setFullscreenImage(null)}
+              >
+                <X size={32} />
+              </button>
+            </div>
+          </div>
         )}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-[400px]">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Registro</TabsTrigger>
-            <TabsTrigger value="forgot">Recuperar</TabsTrigger>
-          </TabsList>
-          <TabsContent value="login">
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="seu@email.com" 
-                  required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  required 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Entrando..." : "Entrar"}
-              </Button>
-            </form>
-          </TabsContent>
-          <TabsContent value="register">
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input 
-                  id="name" 
-                  type="text" 
-                  placeholder="Seu nome" 
-                  required 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="seu@email.com" 
-                  required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  required 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Registrando..." : "Registrar"}
-              </Button>
-            </form>
-          </TabsContent>
-          <TabsContent value="forgot">
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="seu@email.com" 
-                  required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Enviando..." : "Recuperar Senha"}
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </div>
+      </main>
     </div>
-  )
-}
-
-interface MainPageProps {
-  onLogout: () => void;
-}
-
-const MainPage: React.FC<MainPageProps> = ({ onLogout }) => {
-  return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Bem-vindo ao Taste it!</h1>
-        <Button onClick={onLogout}>Sair</Button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pedidos Recentes</CardTitle>
-            <CardDescription>Seus últimos pedidos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Pedido #1234 - R$ 50,00</p>
-            <p>Pedido #5678 - R$ 75,00</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Restaurantes Favoritos</CardTitle>
-            <CardDescription>Seus lugares preferidos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Restaurante A</p>
-            <p>Restaurante B</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Promoções</CardTitle>
-            <CardDescription>Ofertas especiais para você</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>10% de desconto em pizzas</p>
-            <p>Frete grátis na primeira compra</p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  )
-}
-
-export default function IntegratedApp() {
-  const { user, logout } = useAuth()
-  const [message, setMessage] = useState("")
-  const [messageType, setMessageType] = useState<"info" | "error" | "success">("info")
-
-  const handleLogout = async () => {
-    const result = await logout()
-    setMessage(result.message)
-    setMessageType(result.success ? "success" : "error")
-  }
-
-  if (!user) {
-    return <LoginComponent onLogin={() => setMessage("")} />
-  }
-
-  return (
-    <>
-      {message && (
-        <Alert className="m-4" variant={messageType === "error" ? "destructive" : "default"}>
-          <AlertTitle>{messageType === "error" ? "Erro" : "Sucesso"}</AlertTitle>
-          <AlertDescription>{message}</AlertDescription>
-        </Alert>
-      )}
-      <MainPage onLogout={handleLogout} />
-    </>
-  )
+  );
 }
