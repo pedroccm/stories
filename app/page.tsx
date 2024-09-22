@@ -1,18 +1,20 @@
-import { useState } from "react"
+'use client'
+
+import React, { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 const API_URL = 'https://gaiadev.com.br/stories/'
 
 const useAuth = () => {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  const apiCall = async (endpoint, method, data) => {
+  const apiCall = async (endpoint: string, method: string, data?: any) => {
     const response = await fetch(`${API_URL}${endpoint}`, {
       method,
       headers: {
@@ -27,38 +29,38 @@ const useAuth = () => {
     return response.json()
   }
 
-  const login = async (email, password) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true)
     try {
       const data = await apiCall('/login', 'POST', { email, password })
       setUser(data.user)
       return { success: true, message: "Login realizado com sucesso!" }
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, message: error.message || "Erro ao fazer login." }
     } finally {
       setIsLoading(false)
     }
   }
 
-  const register = async (name, email, password) => {
+  const register = async (name: string, email: string, password: string) => {
     setIsLoading(true)
     try {
       const data = await apiCall('/register', 'POST', { name, email, password })
       setUser(data.user)
       return { success: true, message: "Registro realizado com sucesso!" }
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, message: error.message || "Erro ao registrar." }
     } finally {
       setIsLoading(false)
     }
   }
 
-  const forgotPassword = async (email) => {
+  const forgotPassword = async (email: string) => {
     setIsLoading(true)
     try {
       await apiCall('/forgot-password', 'POST', { email })
       return { success: true, message: "Email de recuperação enviado!" }
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, message: error.message || "Erro ao enviar email de recuperação." }
     } finally {
       setIsLoading(false)
@@ -71,7 +73,7 @@ const useAuth = () => {
       await apiCall('/logout', 'POST')
       setUser(null)
       return { success: true, message: "Logout realizado com sucesso!" }
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, message: error.message || "Erro ao fazer logout." }
     } finally {
       setIsLoading(false)
@@ -81,16 +83,20 @@ const useAuth = () => {
   return { user, login, register, forgotPassword, logout, isLoading }
 }
 
-const LoginComponent = ({ onLogin }) => {
+interface LoginComponentProps {
+  onLogin: () => void;
+}
+
+const LoginComponent: React.FC<LoginComponentProps> = ({ onLogin }) => {
   const [activeTab, setActiveTab] = useState("login")
   const { login, register, forgotPassword, isLoading } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
   const [message, setMessage] = useState("")
-  const [messageType, setMessageType] = useState("info")
+  const [messageType, setMessageType] = useState<"info" | "error" | "success">("info")
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     const result = await login(email, password)
     if (result.success) {
@@ -101,7 +107,7 @@ const LoginComponent = ({ onLogin }) => {
     }
   }
 
-  const handleRegister = async (e) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     const result = await register(name, email, password)
     setMessage(result.message)
@@ -111,7 +117,7 @@ const LoginComponent = ({ onLogin }) => {
     }
   }
 
-  const handleForgotPassword = async (e) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     const result = await forgotPassword(email)
     setMessage(result.message)
@@ -234,7 +240,11 @@ const LoginComponent = ({ onLogin }) => {
   )
 }
 
-const MainPage = ({ onLogout }) => {
+interface MainPageProps {
+  onLogout: () => void;
+}
+
+const MainPage: React.FC<MainPageProps> = ({ onLogout }) => {
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-8">
@@ -280,7 +290,7 @@ const MainPage = ({ onLogout }) => {
 export default function IntegratedApp() {
   const { user, logout } = useAuth()
   const [message, setMessage] = useState("")
-  const [messageType, setMessageType] = useState("info")
+  const [messageType, setMessageType] = useState<"info" | "error" | "success">("info")
 
   const handleLogout = async () => {
     const result = await logout()
