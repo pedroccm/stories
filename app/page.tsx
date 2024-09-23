@@ -106,14 +106,14 @@ export default function Home() {
       }
     }, options);
 
-    const currentLoader = loader.current; // Captura o valor do ref
+    const currentLoader = loader.current; 
 
     if (currentLoader) {
       observer.observe(currentLoader);
     }
 
     return () => {
-      if (currentLoader) { // Usa o valor capturado na limpeza
+      if (currentLoader) { 
         observer.unobserve(currentLoader);
       }
     };
@@ -143,7 +143,7 @@ export default function Home() {
     setSelectedDate(null);
     setVisibleMediaFiles([]);
     setLoading(true);
-    setMenuOpen(false); // Fecha o menu após a seleção
+    setMenuOpen(false);
     fetch(`/storiesJson/${instagramId}.json`)
       .then(response => response.json())
       .then((data: StoryData) => {
@@ -173,7 +173,7 @@ export default function Home() {
     const match = filename.match(/(\d{4}-\d{2}-\d{2}) at (\d{2}\.\d{2}\.\d{2} [AP]M)/);
     if (match) {
       const [, datePart, timePart] = match;
-      const [, month, day] = datePart.split('-'); // Remova a extração do 'year'
+      const [, month, day] = datePart.split('-'); 
       const [time] = timePart.split(' ');
       const [hours, minutes] = time.split('.');
       
@@ -190,8 +190,7 @@ export default function Home() {
       }
     }
     return '';
-};
-
+  };
 
   const filteredProfiles = profiles.filter(profile => 
     profile.instagram_id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -289,6 +288,7 @@ export default function Home() {
               {isVideo(file) ? (
                 <video
                   src={`${basePath}${file}`}
+                  poster={`${basePath}thumbnails/${file}.jpg`} // Ajuste para o caminho correto da thumbnail
                   className="w-full h-full object-cover"
                   playsInline
                   muted
