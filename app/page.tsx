@@ -202,7 +202,7 @@ export default function Home() {
       <header className="flex justify-between items-center p-4">
         <div className="flex items-center">
           <Menu className="mr-4 cursor-pointer" onClick={() => setMenuOpen(!menuOpen)} />
-          <span className="text-red-600 font-bold text-xl">Premium</span>
+          <span className="text-red-600 font-bold text-xl">Time Machine</span>
         </div>
         <div className="flex items-center space-x-4">
           <button
@@ -288,13 +288,21 @@ export default function Home() {
               {isVideo(file) ? (
                 <video
                   src={`${basePath}${file}`}
-                  poster={`${basePath}thumbnails/${file}.jpg`} // Ajuste para o caminho correto da thumbnail
                   className="w-full h-full object-cover"
                   playsInline
                   muted
-                  loop
-                  controls
                   preload="metadata"
+                  onLoadedData={(e) => {
+                    const video = e.currentTarget;
+                    video.play().then(() => {
+                      setTimeout(() => {
+                        video.pause();
+                      }, 1000); // Pausa após 1 segundo
+                    }).catch(error => {
+                      console.error('Erro ao tentar reproduzir o vídeo:', error);
+                    });
+                  }}
+                  controls={false}
                 />
               ) : (
                 <Image
