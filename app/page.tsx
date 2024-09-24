@@ -1,4 +1,4 @@
-// components/Home.tsx
+// pages/index.tsx
 
 'use client'
 
@@ -7,7 +7,7 @@ import { Menu, X, ZoomIn, ZoomOut, Calendar } from 'lucide-react';
 import Image from 'next/image';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import VideoThumbnail from './VideoThumbnail'; // Importe o novo componente
+import VideoThumbnail from '../components/VideoThumbnail'; // Ajuste o caminho conforme necessário
 
 const bucketName = "nbapedroccm";
 const region = "us-east-2";
@@ -45,7 +45,7 @@ export default function Home() {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(getYesterday());
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const loader = useRef(null);
+  const loader = useRef<HTMLDivElement>(null);
 
   function getYesterday() {
     const yesterday = new Date();
@@ -71,10 +71,10 @@ export default function Home() {
   const loadMoreItems = useCallback(() => {
     if (loading || !hasMore) return;
     setLoading(true);
-    
+
     const currentLength = visibleMediaFiles.length;
     const more = allMediaFiles.slice(currentLength, currentLength + LOAD_MORE);
-    
+
     setVisibleMediaFiles(prev => [...prev, ...more]);
     setHasMore(currentLength + LOAD_MORE < allMediaFiles.length);
     setLoading(false);
@@ -109,14 +109,14 @@ export default function Home() {
       }
     }, options);
 
-    const currentLoader = loader.current; 
+    const currentLoader = loader.current;
 
     if (currentLoader) {
       observer.observe(currentLoader);
     }
 
     return () => {
-      if (currentLoader) { 
+      if (currentLoader) {
         observer.unobserve(currentLoader);
       }
     };
@@ -177,12 +177,12 @@ export default function Home() {
     const match = filename.match(/(\d{4}-\d{2}-\d{2}) at (\d{2}\.\d{2}\.\d{2} [AP]M)/);
     if (match) {
       const [, datePart, timePart] = match;
-      const [, month, day] = datePart.split('-'); 
+      const [, month, day] = datePart.split('-');
       const [time] = timePart.split(' ');
       const [hours, minutes] = time.split('.');
-      
+
       const formattedDate = `${day}/${month} - ${hours}:${minutes}`;
-      
+
       if (selectedProfile) {
         return `${selectedProfile}\n${formattedDate}`;
       } else {
@@ -196,7 +196,7 @@ export default function Home() {
     return '';
   };
 
-  const filteredProfiles = profiles.filter(profile => 
+  const filteredProfiles = profiles.filter(profile =>
     profile.instagram_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -206,7 +206,7 @@ export default function Home() {
       <header className="flex justify-between items-center p-4">
         <div className="flex items-center">
           <Menu className="mr-4 cursor-pointer" onClick={() => setMenuOpen(!menuOpen)} />
-          <span className="text-red-600 font-bold text-xl">Storie Time Machine</span>
+          <span className="text-red-600 font-bold text-xl">Insta Time Machine</span>
         </div>
         <div className="flex items-center space-x-4">
           <button
@@ -234,13 +234,13 @@ export default function Home() {
 
       {/* Navigation */}
       <nav className="flex space-x-4 p-4 border-b border-gray-700">
-        <button 
+        <button
           className={`px-4 py-2 rounded-full ${showPhotos ? 'bg-white text-black' : 'border border-gray-500 text-white'}`}
           onClick={togglePhotos}
         >
           Photos
         </button>
-        <button 
+        <button
           className={`px-4 py-2 rounded-full ${showVideos ? 'bg-white text-black' : 'border border-gray-500 text-white'}`}
           onClick={toggleVideos}
         >
@@ -267,8 +267,8 @@ export default function Home() {
           </div>
           <ul className="p-4 overflow-y-auto flex-grow">
             {filteredProfiles.map(profile => (
-              <li 
-                key={profile.id} 
+              <li
+                key={profile.id}
                 className={`py-2 cursor-pointer hover:bg-gray-800 ${selectedProfile === profile.instagram_id ? 'bg-gray-700' : ''} flex items-center`}
                 onClick={() => handleProfileSelect(profile.instagram_id)}
               >
@@ -319,7 +319,7 @@ export default function Home() {
             }
           })}
         </div>
-        
+
         {/* Loading indicator */}
         <div ref={loader} className="flex justify-center my-4">
           {loading && <p>Carregando mais...</p>}
