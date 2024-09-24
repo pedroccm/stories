@@ -1,3 +1,5 @@
+// components/Home.tsx
+
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -5,6 +7,7 @@ import { Menu, X, ZoomIn, ZoomOut, Calendar } from 'lucide-react';
 import Image from 'next/image';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import VideoThumbnail from './VideoThumbnail'; // Importe o novo componente
 
 const bucketName = "nbapedroccm";
 const region = "us-east-2";
@@ -122,6 +125,7 @@ export default function Home() {
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
     setSelectedProfile(null);
+    setVisibleMediaFiles([]);
     setCalendarOpen(false);
     if (date) {
       loadMediaForDate(date);
@@ -202,7 +206,7 @@ export default function Home() {
       <header className="flex justify-between items-center p-4">
         <div className="flex items-center">
           <Menu className="mr-4 cursor-pointer" onClick={() => setMenuOpen(!menuOpen)} />
-          <span className="text-red-600 font-bold text-xl">Time Machine</span>
+          <span className="text-red-600 font-bold text-xl">Storie Time Machine</span>
         </div>
         <div className="flex items-center space-x-4">
           <button
@@ -283,44 +287,37 @@ export default function Home() {
 
         {/* Media grid */}
         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${thumbnailWidth}px, 1fr))` }}>
-          {filteredMediaFiles.map((file, index) => (
-            <div key={index} className="relative aspect-[9/16] bg-gray-800 rounded-lg overflow-hidden">
-              {isVideo(file) ? (
-                <video
+          {filteredMediaFiles.map((file, index) => {
+            if (isVideo(file)) {
+              const posterSrc = `${basePath}thumbnails/${file}.jpg`; // Ajuste para o caminho correto da thumbnail
+              return (
+                <VideoThumbnail
+                  key={index}
                   src={`${basePath}${file}`}
-                  className="w-full h-full object-cover"
-                  playsInline
-                  muted
-                  preload="metadata"
-                  onLoadedData={(e) => {
-                    const video = e.currentTarget;
-                    video.play().then(() => {
-                      setTimeout(() => {
-                        video.pause();
-                      }, 1000); // Pausa após 1 segundo
-                    }).catch(error => {
-                      console.error('Erro ao tentar reproduzir o vídeo:', error);
-                    });
-                  }}
-                  controls={false}
-                />
-              ) : (
-                <Image
-                  src={`${basePath}${file}`}
-                  alt={`Short ${index + 1}`}
-                  layout="fill"
-                  objectFit="cover"
-                  className="cursor-pointer"
+                  poster={posterSrc}
                   onClick={() => setFullscreenImage(`${basePath}${file}`)}
                 />
-              )}
-              <div className="absolute bottom-2 left-2 text-white text-xs">
-                <p className="bg-black bg-opacity-50 p-1 rounded">
-                  {formatDate(file)}
-                </p>
-              </div>
-            </div>
-          ))}
+              );
+            } else {
+              return (
+                <div key={index} className="relative aspect-[9/16] bg-gray-800 rounded-lg overflow-hidden">
+                  <Image
+                    src={`${basePath}${file}`}
+                    alt={`Short ${index + 1}`}
+                    layout="fill"
+                    objectFit="cover"
+                    className="cursor-pointer"
+                    onClick={() => setFullscreenImage(`${basePath}${file}`)}
+                  />
+                  <div className="absolute bottom-2 left-2 text-white text-xs">
+                    <p className="bg-black bg-opacity-50 p-1 rounded">
+                      {formatDate(file)}
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+          })}
         </div>
         
         {/* Loading indicator */}
