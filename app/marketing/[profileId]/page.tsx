@@ -11,6 +11,13 @@ const bucketName = "nbapedroccm";
 const region = "us-east-2";
 const basePath = `https://${bucketName}.s3.${region}.amazonaws.com/`;
 
+interface Profile {
+  id: number;
+  user_id: number;
+  instagram_id: string;
+  id_profile: string;
+}
+
 interface StoryData {
   files: string[];
 }
@@ -22,7 +29,12 @@ const MAX_THUMBNAIL_WIDTH = 300;
 const ZOOM_STEP = 20;
 
 export default function ProfilePage() {
-  const { profileId } = useParams();  // Usar profileId diretamente da URL dinâmica
+  const params = useParams();
+  const profileIdParam = params.profileId;
+
+  // Garantir que profileId seja uma string
+  const profileId = Array.isArray(profileIdParam) ? profileIdParam[0] : profileIdParam;
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [visibleMediaFiles, setVisibleMediaFiles] = useState<string[]>([]);
   const [allMediaFiles, setAllMediaFiles] = useState<string[]>([]);
@@ -32,25 +44,37 @@ export default function ProfilePage() {
   const [showPhotos, setShowPhotos] = useState(true);
   const [showVideos, setShowVideos] = useState(true);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(getYesterday());
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const loader = useRef(null);
+  const loader = useRef<HTMLDivElement | null>(null);
 
-  // Carregar mídia de um perfil específico baseado no profileId
-  const loadMediaForProfile = useCallback((profileId: string) => {
+  function getYesterday() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday;
+  }
+
+  // Função para carregar mídia de um perfil específico
+  const loadMediaForProfile = useCallback(async (profileId: string) => {
     setLoading(true);
-    fetch(`/storiesJson/${profileId}.json`)
-      .then(response => response.json())
-      .then((data: StoryData) => {
-        const reversedFiles = [...data.files].reverse();
-        setAllMediaFiles(reversedFiles);
-        setVisibleMediaFiles(reversedFiles.slice(0, INITIAL_LOAD));
-        setHasMore(reversedFiles.length > INITIAL_LOAD);
-      })
-      .catch(error => console.error('Error loading profile data:', error))
-      .finally(() => setLoading(false));
+    try {
+      const response = await fetch(`/storiesJson/${profileId}.json`);
+      if (!response.ok) {
+        throw new Error('Erro ao carregar dados do perfil');
+      }
+      const data: StoryData = await response.json();
+      const reversedFiles = [...data.files].reverse();
+      setAllMediaFiles(reversedFiles);
+      setVisibleMediaFiles(reversedFiles.slice(0, INITIAL_LOAD));
+      setHasMore(reversedFiles.length > INITIAL_LOAD);
+    } catch (error) {
+      console.error('Erro ao carregar mídia do perfil:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  // Função para carregar mais itens quando o usuário rolar
   const loadMoreItems = useCallback(() => {
     if (loading || !hasMore) return;
     setLoading(true);
@@ -63,12 +87,14 @@ export default function ProfilePage() {
     setLoading(false);
   }, [loading, hasMore, visibleMediaFiles, allMediaFiles]);
 
+  // Carregar mídia quando o profileId muda
   useEffect(() => {
     if (profileId) {
-      loadMediaForProfile(profileId); // Carregar mídia quando a página for acessada
+      loadMediaForProfile(profileId);
     }
   }, [profileId, loadMediaForProfile]);
 
+  // Configurar o IntersectionObserver para carregar mais itens
   useEffect(() => {
     const options = {
       root: null,
@@ -123,7 +149,7 @@ export default function ProfilePage() {
     const match = filename.match(/(\d{4}-\d{2}-\d{2}) at (\d{2}\.\d{2}\.\d{2} [AP]M)/);
     if (match) {
       const [, datePart, timePart] = match;
-      const [, month, day] = datePart.split('-');
+      const [year, month, day] = datePart.split('-'); 
       const [time] = timePart.split(' ');
       const [hours, minutes] = time.split('.');
 
@@ -181,15 +207,36 @@ export default function ProfilePage() {
         </button>
       </nav>
 
-      {/* Media grid */}
-      <main className="p-4">
+      {/* Main content */}
+      <main className="relative p-4">
+        {/* Side menu */}
+        <div className={`fixed top-0 left-0 h-full w-64 bg-gray-900 transform ${menuOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out z-20 flex flex-col`}>
+          <div className="flex flex-col justify-between p-4 border-b border-gray-700 bg-gray-900 sticky top-0">
+            <div className="flex justify-between items-center mb-4">
+              <span className="font-bold">Profiles</span>
+              <X className="cursor-pointer" onClick={() => setMenuOpen(false)} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search profiles..."
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded"
+              value={profileId}
+              readOnly
+            />
+          </div>
+          <ul className="p-4 overflow-y-auto flex-grow">
+            {/* Aqui você pode listar os perfis se necessário */}
+          </ul>
+        </div>
+
+        {/* Media grid */}
         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${thumbnailWidth}px, 1fr))` }}>
           {filteredMediaFiles.map((file, index) => (
             <div key={index} className="relative aspect-[9/16] bg-gray-800 rounded-lg overflow-hidden">
               {isVideo(file) ? (
                 <video
                   src={`${basePath}${file}`}
-                  poster={`${basePath}thumbnails/${file}.jpg`}
+                  poster={`${basePath}thumbnails/${file}.jpg`} // Ajuste para o caminho correto da thumbnail
                   className="w-full h-full object-cover"
                   playsInline
                   muted
@@ -201,9 +248,10 @@ export default function ProfilePage() {
                 <Image
                   src={`${basePath}${file}`}
                   alt={`Short ${index + 1}`}
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  style={{ objectFit: 'cover' }}
                   className="cursor-pointer"
+                  onClick={() => setFullscreenImage(`${basePath}${file}`)}
                 />
               )}
               <div className="absolute bottom-2 left-2 text-white text-xs">
@@ -214,7 +262,7 @@ export default function ProfilePage() {
             </div>
           ))}
         </div>
-
+        
         {/* Loading indicator */}
         <div ref={loader} className="flex justify-center my-4">
           {loading && <p>Carregando mais...</p>}
@@ -228,8 +276,8 @@ export default function ProfilePage() {
               <Image
                 src={fullscreenImage}
                 alt="Fullscreen image"
-                layout="fill"
-                objectFit="contain"
+                fill
+                style={{ objectFit: 'contain' }}
               />
               <button
                 className="absolute top-4 right-4 text-white text-2xl"
