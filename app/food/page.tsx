@@ -27,7 +27,7 @@ const MIN_THUMBNAIL_WIDTH = 100;
 const MAX_THUMBNAIL_WIDTH = 300;
 const ZOOM_STEP = 20;
 
-export default function MarketingPage() {
+export default function FoodPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [visibleMediaFiles, setVisibleMediaFiles] = useState<string[]>([]);
   const [allMediaFiles, setAllMediaFiles] = useState<string[]>([]);
@@ -84,7 +84,7 @@ export default function MarketingPage() {
   }, [selectedDate, loadMediaForDate]);
 
   useEffect(() => {
-    fetch('/profile_mkt_digital.json')
+    fetch('/profile_food.json')
       .then(response => response.json())
       .then((data: Profile[]) => {
         setProfiles(data);
