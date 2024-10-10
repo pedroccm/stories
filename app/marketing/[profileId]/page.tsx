@@ -11,13 +11,6 @@ const bucketName = "nbapedroccm";
 const region = "us-east-2";
 const basePath = `https://${bucketName}.s3.${region}.amazonaws.com/`;
 
-interface Profile {
-  id: number;
-  user_id: number;
-  instagram_id: string;
-  id_profile: string;
-}
-
 interface StoryData {
   files: string[];
 }
@@ -149,7 +142,7 @@ export default function ProfilePage() {
     const match = filename.match(/(\d{4}-\d{2}-\d{2}) at (\d{2}\.\d{2}\.\d{2} [AP]M)/);
     if (match) {
       const [, datePart, timePart] = match;
-      const [year, month, day] = datePart.split('-'); 
+      const [, month, day] = datePart.split('-');
       const [time] = timePart.split(' ');
       const [hours, minutes] = time.split('.');
 
@@ -209,27 +202,6 @@ export default function ProfilePage() {
 
       {/* Main content */}
       <main className="relative p-4">
-        {/* Side menu */}
-        <div className={`fixed top-0 left-0 h-full w-64 bg-gray-900 transform ${menuOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out z-20 flex flex-col`}>
-          <div className="flex flex-col justify-between p-4 border-b border-gray-700 bg-gray-900 sticky top-0">
-            <div className="flex justify-between items-center mb-4">
-              <span className="font-bold">Profiles</span>
-              <X className="cursor-pointer" onClick={() => setMenuOpen(false)} />
-            </div>
-            <input
-              type="text"
-              placeholder="Search profiles..."
-              className="w-full px-3 py-2 bg-gray-800 text-white rounded"
-              value={profileId}
-              readOnly
-            />
-          </div>
-          <ul className="p-4 overflow-y-auto flex-grow">
-            {/* Aqui você pode listar os perfis se necessário */}
-          </ul>
-        </div>
-
-        {/* Media grid */}
         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${thumbnailWidth}px, 1fr))` }}>
           {filteredMediaFiles.map((file, index) => (
             <div key={index} className="relative aspect-[9/16] bg-gray-800 rounded-lg overflow-hidden">
