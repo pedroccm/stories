@@ -291,6 +291,7 @@ export default function Home() {
               {isVideo(file) ? (
                 <VideoPlayer
                   src={`${basePath}${file}`}
+                  poster=""  {/* String vazia se não houver poster */}
                 />
               ) : (
                 <Image
