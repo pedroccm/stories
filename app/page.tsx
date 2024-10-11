@@ -7,7 +7,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import dynamic from 'next/dynamic';
 
-const VideoPlayer = dynamic(() => import('../components/VideoPlayer'), { ssr: false });
+const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
 
 const bucketName = "nbapedroccm";
 const region = "us-east-2";
