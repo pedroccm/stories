@@ -15,10 +15,10 @@ const nextConfig = {
       config.resolve.alias = {
         ...config.resolve.alias,
         'video.js': 'video.js/dist/video.min.js',
-      }
+      };
     }
-    return config
+    return config;
   },
-}
+};
 
 export default nextConfig;
