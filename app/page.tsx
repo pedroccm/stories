@@ -205,7 +205,7 @@ export default function Home() {
       <header className="flex justify-between items-center p-4">
         <div className="flex items-center">
           <Menu className="mr-4 cursor-pointer" onClick={() => setMenuOpen(!menuOpen)} />
-          <span className="text-red-600 font-bold text-xl">Insta Stories</span>
+          <span className="text-red-600 font-bold text-xl">Stories</span>
         </div>
         <div className="flex items-center space-x-4">
           <button
@@ -291,7 +291,7 @@ export default function Home() {
               {isVideo(file) ? (
                 <VideoPlayer
                   src={`${basePath}${file}`}
-                  poster=""  {/* String vazia se não houver poster */}
+                  poster=""
                 />
               ) : (
                 <Image
