@@ -5,6 +5,9 @@ import { Menu, X, ZoomIn, ZoomOut, Calendar } from 'lucide-react';
 import Image from 'next/image';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import dynamic from 'next/dynamic';
+
+const VideoPlayer = dynamic(() => import('../components/VideoPlayer'), { ssr: false });
 
 const bucketName = "nbapedroccm";
 const region = "us-east-2";
@@ -106,14 +109,14 @@ export default function Home() {
       }
     }, options);
 
-    const currentLoader = loader.current; 
+    const currentLoader = loader.current;
 
     if (currentLoader) {
       observer.observe(currentLoader);
     }
 
     return () => {
-      if (currentLoader) { 
+      if (currentLoader) {
         observer.unobserve(currentLoader);
       }
     };
@@ -173,7 +176,7 @@ export default function Home() {
     const match = filename.match(/(\d{4}-\d{2}-\d{2}) at (\d{2}\.\d{2}\.\d{2} [AP]M)/);
     if (match) {
       const [, datePart, timePart] = match;
-      const [, month, day] = datePart.split('-'); 
+      const [, month, day] = datePart.split('-');
       const [time] = timePart.split(' ');
       const [hours, minutes] = time.split('.');
       
@@ -286,22 +289,17 @@ export default function Home() {
           {filteredMediaFiles.map((file, index) => (
             <div key={index} className="relative aspect-[9/16] bg-gray-800 rounded-lg overflow-hidden">
               {isVideo(file) ? (
-                <video
+                <VideoPlayer
                   src={`${basePath}${file}`}
-                  poster={`${basePath}thumbnails/${file}.jpg`} // Ajuste para o caminho correto da thumbnail
-                  className="w-full h-full object-cover"
-                  playsInline
-                  muted
-                  loop
-                  controls
-                  preload="metadata"
+                  poster={`${basePath}thumbnails/${file}.jpg`}
                 />
               ) : (
                 <Image
                   src={`${basePath}${file}`}
                   alt={`Short ${index + 1}`}
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  sizes={`${thumbnailWidth}px`}
+                  style={{ objectFit: 'cover' }}
                   className="cursor-pointer"
                   onClick={() => setFullscreenImage(`${basePath}${file}`)}
                 />
@@ -328,8 +326,8 @@ export default function Home() {
               <Image
                 src={fullscreenImage}
                 alt="Fullscreen image"
-                layout="fill"
-                objectFit="contain"
+                fill
+                style={{ objectFit: 'contain' }}
               />
               <button
                 className="absolute top-4 right-4 text-white text-2xl"
